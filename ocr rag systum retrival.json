@@ -1,0 +1,220 @@
+{
+  "name": "ocr rag systum retrival",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.message }}",
+        "options": {
+          "systemMessage": "You are a helpful document assistant. You have access to a retrieval tool that searches through uploaded documents.\n\nYou are a helpful assistant. Answer questions based on the provided context.\n\nSTRICT OUTPUT RULES:\n1. Never start with \"According to the document\" or any similar phrase\n2. Never use asterisks (* or **)\n3. Never use markdown formatting\n4. Never use hashtags (#) for headings\n5. Never use bullet symbols ( *, •)\n6. Never use underscores for formatting\n7. Write in clean plain paragraphs only\n8. If listing items, write them as numbered lines like: 1. item\n9. Keep answers concise and direct\n\nRULES:\n1. ALWAYS call the retrieval tool before answering ANY question.\n2. Search using short simple keywords — not full sentences. Example: for 'what is Aniket phone number' search 'phone' or 'contact' or 'mobile'.\n3. If first search gives no result, try again with different keywords.\n4. Retrieved text comes from OCR — formatting may not be perfect. Read carefully.\n5. NEVER say 'information not available' if retrieval tool returned ANY text.\n6. Always start answer with: 'According to the document...'\n7. If truly nothing found after 2-3 searches, then say 'This information is not present in the uploaded documents.'\n\nuse only this bullet simble \"-\"\nand do not use this line \"Accordint to the documnet\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        800,
+        -48
+      ],
+      "id": "6a1325d4-dc72-4619-a768-fe3b82d7ab53",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search uploaded documents using short keywords like 'phone', 'email', 'name', 'address', 'skills', 'experience', 'education'. Call this tool multiple times with different keywords if needed. Documents contain OCR-extracted text from PDFs and images.",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "radhalado1024",
+          "mode": "list",
+          "cachedResultName": "radhalado1024"
+        },
+        "topK": 15,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [
+        992,
+        176
+      ],
+      "id": "6c707375-bf3a-465a-a308-52eb776b43b3",
+      "name": "Pinecone Vector Store",
+      "credentials": {
+        "pineconeApi": {
+          "id": "XiBR3en5qU2a2Ups",
+          "name": "Pinecone account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsMistralCloud",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        384
+      ],
+      "id": "426e5870-7898-4a3c-8ace-8785c32fbaf6",
+      "name": "Embeddings Mistral Cloud",
+      "credentials": {
+        "mistralCloudApi": {
+          "id": "9N6eWSeCZ5atoxbs",
+          "name": "Mistral Cloud account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.body.sessionId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        864,
+        176
+      ],
+      "id": "d8fcb6c3-f4e5-4a83-993b-9677166343f2",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "21d4d8d5-b703-4c63-9a50-f17cc2c8b894",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        512,
+        -48
+      ],
+      "id": "43d98511-dbe3-4910-ad2b-3245aac6140b",
+      "name": "Webhook",
+      "webhookId": "21d4d8d5-b703-4c63-9a50-f17cc2c8b894"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1216,
+        -48
+      ],
+      "id": "9323eaae-a945-43b5-9751-7fb99b011d5e",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        672,
+        160
+      ],
+      "id": "967ec6d1-524e-4183-9d18-99eeee192fc6",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "4y0XM9KDB12sC5YM",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Pinecone Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Mistral Cloud": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "144e29dd-cf80-41b4-868e-71734adf5847",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fc6057e90fbe4aa1be64752f59e776be28983f0cc603f5c19175e814feba5a3b"
+  },
+  "id": "xMP9BPnDt1zMCYrP",
+  "tags": []
+}
